@@ -1,0 +1,34 @@
+# Azure CLI
+.azure/
+
+# Bicep
+*.log
+.bicep/
+*.json
+!parameters.json
+
+# Build artifacts
+bin/
+obj/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
