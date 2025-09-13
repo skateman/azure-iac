@@ -14,10 +14,10 @@ First of all, you would need a resource group that ARM/bicep would fully manage.
 ```sh
 az ad app create --display-name "github-oidc-app" --sign-in-audience AzureADMyOrg
 az ad sp create --id <appId>
-az role assignment create --assignee <appId> --role Contributor --scope /subscriptions/<subId>/resourceGroups/github-iac
+az role assignment create --assignee <appId> --role Contributor --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
 
-2. Create a `keyvault-role.json` file with the custom role definition
+2. Create a `keyvault-role.json` file with the custom role definition:
 ```json
 {
   "Name": "Key Vault Deploy Only",
@@ -31,30 +31,42 @@ az role assignment create --assignee <appId> --role Contributor --scope /subscri
 }
 ```
 
-3. Create the custom role and assign it to the service principal
+3. Create the custom role and assign it to the service principal:
 ```sh
 az role definition create --role-definition @keyvault-role.json
 az role assignment create --assignee <appId> --role "Key Vault Deploy Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
 
-4. Create a `federated.json` file with the repository path
+4. Create two JSON files that defining federated credentials:
 ```json
+// federated-deploy.json
 {
-  "name": "github-oidc",
+  "name": "github-oidc-deploy",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:skateman/azure-iac:ref:refs/heads/master",
+  "subject": "repo:<user>/<repo>:refs/heads/master",
+  "audiences": [
+    "api://AzureADTokenExchange"
+  ]
+}
+
+// federated-validate.json
+{
+  "name": "github-oidc-validate",
+  "issuer": "https://token.actions.githubusercontent.com",
+  "subject": "repo:<user>/<repo>:pull_request",
   "audiences": [
     "api://AzureADTokenExchange"
   ]
 }
 ```
 
-5. Apply the file against the created application
+5. Apply the files against the created application:
 ```sh
-az ad app federated-credential create --id <appId> --parameters @federated.json
+az ad app federated-credential create --id <appId> --parameters @federated-deploy.json
+az ad app federated-credential create --id <appId> --parameters @federated-validate.json
 ```
 
-6. In the repository set the following secrets
+6. In the repository set the following secrets:
 * `AZURE_CLIENT_ID`
 * `AZURE_TENANT_ID`
 * `AZURE_SUBSCRIPTION_ID`
