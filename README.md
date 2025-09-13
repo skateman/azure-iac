@@ -17,7 +17,7 @@ az ad sp create --id <appId>
 az role assignment create --assignee <appId> --role Contributor --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
 
-2. Create a `keyvault-role.json` file with the custom role definition:
+2. Create a `keyvault-deploy-role.json` file with the custom role definition:
 ```json
 {
   "Name": "Key Vault Deploy Only",
@@ -33,7 +33,7 @@ az role assignment create --assignee <appId> --role Contributor --scope /subscri
 
 3. Create the custom role and assign it to the service principal:
 ```sh
-az role definition create --role-definition @keyvault-role.json
+az role definition create --role-definition @keyvault-deploy-role.json
 az role assignment create --assignee <appId> --role "Key Vault Deploy Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
 
@@ -76,7 +76,36 @@ az ad app federated-credential create --id <appId> --parameters @federated-valid
 The pipeline deploys two bicep files after each other. The first step is the creation of a Key Vault defined in `keyvault.bicep` that needs to be manually populated with the following secrets:
 * TBD ...
 
-As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy.
+As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy. By default, not even the owner of the Resource Group has access to the contents of the Key Vault. Our proposed approach is to create a role that enables the creation but not the reading of secrets and assign it to a user:
+
+1. Create the `keyvault-wo-role.json` file with the custom role definition:
+```json
+{
+  "Name": "Key Vault Secrets Write Only",
+  "Description": "Can create, write, and list Key Vault secrets but cannot read secret values",
+  "Actions": [],
+  "DataActions": [
+    "Microsoft.KeyVault/vaults/secrets/setSecret/action",
+    "Microsoft.KeyVault/vaults/secrets/readMetadata/action",
+    "Microsoft.KeyVault/vaults/secrets/delete"
+  ],
+  "AssignableScopes": [
+    "/subscriptions/2844d552-9b86-4816-a7b6-32b5ac13512d"
+  ]
+}
+```
+
+2. Create the custom role:
+```sh
+az role definition create --role-definition @keyvault-wo-role.json
+```
+
+3. Assign the custom role to your user:
+```sh
+az role assignment create --assignee <userId> --role "Key Vault Secrets Write Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
+```
+
+After this your user can populate the Key Vault with the required secrets without being able to read them.
 
 ## License
 The application is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
