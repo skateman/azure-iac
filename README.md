@@ -6,6 +6,9 @@ Declarative configuration of an Azure resource group with reconciliation.
 The two templates in the root directory describe the following resources:
 * Key Vault
 * Virtual Network - `vnet-bifrost`
+* Virtual Machine - `vm-heimdall`
+  * With a public IP
+  * Exposing WireGuard
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.

@@ -5,6 +5,11 @@
 // Target scope is resource group level
 targetScope = 'resourceGroup'
 
+// Parameters
+@description('SSH public key for VM access - retrieved from Key Vault')
+@secure()
+param sshPublicKey string
+
 // Metadata
 metadata name = 'azure-iac'
 metadata description = 'Main Bicep template for declarative Azure resource management'
@@ -13,6 +18,14 @@ metadata version = '1.0.0'
 // Deploy Bifrost Virtual Network
 module bifrostNetwork 'modules/vnet-bifrost/main.bicep' = {
   name: 'vnet-bifrost'
+}
+
+// Deploy Heimdall Virtual Machine
+module heimdallVM 'modules/vm-heimdall/main.bicep' = {
+  name: 'vm-heimdall'
+  params: {
+    sshPublicKey: sshPublicKey
+  }
 }
 
 // Outputs
