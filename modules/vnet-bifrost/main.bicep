@@ -5,14 +5,14 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   properties: {
     addressSpace: {
       addressPrefixes: [
-        '10.53.6.0/24'
+        '10.45.9.0/24'
       ]
     }
     subnets: [
       {
         name: 'snet-bifrost'
         properties: {
-          addressPrefix: '10.53.6.0/24' // 10.53.6.1 - 10.53.6.254 (254 usable IPs)
+          addressPrefix: '10.45.9.0/24' // 10.45.9.1 - 10.45.9.254 (254 usable IPs)
           networkSecurityGroup: {
             id: networkSecurityGroup.id
           }
@@ -34,8 +34,8 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           protocol: '*'
           sourcePortRange: '*'
           destinationPortRange: '*'
-          sourceAddressPrefix: '10.53.6.0/24'
-          destinationAddressPrefix: '10.53.6.0/24'
+          sourceAddressPrefix: '10.45.9.0/24'
+          destinationAddressPrefix: '10.45.9.0/24'
           access: 'Allow'
           priority: 1000
           direction: 'Inbound'
