@@ -10,6 +10,10 @@ The two templates in the root directory describe the following resources:
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
 
+```sh
+az group create --name <rgName> --location <rgLocation>
+```
+
 ### OIDC for GitHub in Azure
 1. Create an application, a service principal with a Contributor role assigned:
 ```sh
