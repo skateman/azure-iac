@@ -1,10 +1,11 @@
-# azure-iac
+# azure-iac [![Deploy](https://github.com/skateman/azure-iac/actions/workflows/deploy.yml/badge.svg)](https://github.com/skateman/azure-iac/actions/workflows/deploy.yml)
+
 Declarative configuration of an Azure resource group with reconciliation.
 
 ## Contents
 The two templates in the root directory describe the following resources:
 * Key Vault
-* TBD ...
+* Virtual Network - `vnet-bifrost`
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
