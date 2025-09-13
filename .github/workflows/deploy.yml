@@ -25,6 +25,10 @@ jobs:
           template: ./keyvault.bicep
           deploymentMode: incremental
           failOnStdErr: false
+      - run: envsubst < parameters.json.tmpl > parameters.json
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
       - uses: azure/arm-deploy@v2
         with:
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
