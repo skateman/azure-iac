@@ -2,7 +2,9 @@
 Declarative configuration of an Azure resource group with reconciliation.
 
 ## Contents
-TBD
+The two templates in the root directory describe the following resources:
+* Key Vault
+* TBD ...
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
@@ -57,6 +59,12 @@ az ad app federated-credential create --id <appId> --parameters @federated.json
 * `AZURE_TENANT_ID`
 * `AZURE_SUBSCRIPTION_ID`
 * `AZURE_RESOURCE_GROUP`
+
+### Key Vault secrets
+The pipeline deploys two bicep files after each other. The first step is the creation of a Key Vault defined in `keyvault.bicep` that needs to be manually populated with the following secrets:
+* TBD ...
+
+As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy.
 
 ## License
 The application is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).

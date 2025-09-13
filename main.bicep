@@ -10,11 +10,6 @@ metadata name = 'azure-iac'
 metadata description = 'Main Bicep template for declarative Azure resource management'
 metadata version = '1.0.0'
 
-// Modules
-module keyVault 'modules/keyvault/main.bicep' = {
-  name: 'keyVaultDeployment'
-}
-
 // Outputs
 @description('The resource group name where resources are deployed')
 output resourceGroupName string = resourceGroup().name
