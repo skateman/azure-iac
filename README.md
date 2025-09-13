@@ -6,6 +6,9 @@ Declarative configuration of an Azure resource group with reconciliation.
 The two templates in the root directory describe the following resources:
 * Key Vault
 * Virtual Network - `vnet-bifrost`
+* Virtual Machine - `vm-heimdall`
+  * With a public IP
+  * Exposing WireGuard
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
@@ -118,7 +121,10 @@ az ad app federated-credential create --id <appId> --parameters '{
 
 ### Key Vault secrets
 The pipeline deploys two bicep files after each other. The first step is the creation of a Key Vault defined in `keyvault.bicep` that needs to be manually populated with the following secrets:
-* TBD ...
+* `ssh-public-key`
+* `wg-ip-address`
+* `wg-private-key`
+* `wg-peer-*`
 
 As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy. By default, not even the owner of the Resource Group has access to the contents of the Key Vault. Our proposed approach is to create a role that enables the creation but not the reading of secrets and assign it to a user:
 
@@ -145,6 +151,12 @@ az role assignment create --assignee <userId> --role "Key Vault Secrets Write On
 ```
 
 After this your user can populate the Key Vault with the required secrets without being able to read them.
+
+## Troubleshooting
+The VM deployment might fail if you have not accepted the license agreements for the SKU. Unfortunately, this cannot be done via bicep:
+```sh
+az vm image terms accept --publisher kinvolk --offer flatcar-container-linux-free --plan lts2024-gen2
+```
 
 ## License
 The application is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).

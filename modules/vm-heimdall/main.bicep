@@ -1,0 +1,192 @@
+// Heimdall Virtual Machine Module
+@description('Admin username')
+param adminUsername string = 'skateman'
+
+@description('SSH public key')
+@secure()
+param sshPublicKey string
+
+@description('WireGuard private key')
+@secure()
+param wgPrivateKey string
+
+@description('WireGuard IP address')
+@secure()
+param wgIpAddress string
+
+@description('Subnet resource ID for the VM')
+param subnetId string
+
+// Template replacements for ignition file
+var ignitionReplacements = {
+  wgPrivateKey: wgPrivateKey
+  wgIpAddress: wgIpAddress
+  keyVaultName: 'kv-${uniqueString(resourceGroup().id)}'
+}
+
+// Process ignition file with replacements
+var ignitionConfig = reduce(
+  items(ignitionReplacements),
+  loadTextContent('ignition.yml'),
+  (current, item) => replace(current, '\${${item.key}}', item.value)
+)
+
+// Public IP for Heimdall
+resource publicIP 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
+  name: 'pip-heimdall'
+  location: resourceGroup().location
+  sku: {
+    name: 'Standard'
+  }
+  properties: {
+    publicIPAllocationMethod: 'Static'
+    publicIPAddressVersion: 'IPv4'
+  }
+}
+
+// Network Security Group for Heimdall (allows UDP 51820)
+resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
+  name: 'nsg-heimdall'
+  location: resourceGroup().location
+  properties: {
+    securityRules: [
+      {
+        name: 'AllowWireGuard'
+        properties: {
+          protocol: 'UDP'
+          sourcePortRange: '*'
+          destinationPortRange: '51820'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '*'
+          access: 'Allow'
+          priority: 1000
+          direction: 'Inbound'
+        }
+      }
+    ]
+  }
+}
+
+// Network Interface for Heimdall
+resource networkInterface 'Microsoft.Network/networkInterfaces@2023-11-01' = {
+  name: 'nic-heimdall'
+  location: resourceGroup().location
+  properties: {
+    ipConfigurations: [
+      {
+        name: 'ipconfig1'
+        properties: {
+          privateIPAllocationMethod: 'Static'
+          privateIPAddress: '10.45.9.9'
+          subnet: {
+            id: subnetId
+          }
+          publicIPAddress: {
+            id: publicIP.id
+          }
+        }
+      }
+    ]
+    networkSecurityGroup: {
+      id: networkSecurityGroup.id
+    }
+  }
+}
+
+// Heimdall Virtual Machine
+resource virtualMachine 'Microsoft.Compute/virtualMachines@2023-09-01' = {
+  name: 'vm-heimdall'
+  location: resourceGroup().location
+  plan: {
+    name: 'lts2024-gen2'
+    product: 'flatcar-container-linux-free'
+    publisher: 'kinvolk'
+  }
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    hardwareProfile: {
+      vmSize: 'Standard_B2ats_v2'
+    }
+    osProfile: {
+      computerName: 'heimdall'
+      adminUsername: adminUsername
+      customData: base64(ignitionConfig)
+      linuxConfiguration: {
+        disablePasswordAuthentication: true
+        provisionVMAgent: true
+        ssh: {
+          publicKeys: [
+            {
+              path: '/home/${adminUsername}/.ssh/authorized_keys'
+              keyData: sshPublicKey
+            }
+          ]
+        }
+      }
+    }
+    storageProfile: {
+      imageReference: {
+        publisher: 'kinvolk'
+        offer: 'flatcar-container-linux-free'
+        sku: 'lts2024-gen2'
+        version: 'latest'
+      }
+      osDisk: {
+        createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Premium_LRS'
+        }
+        deleteOption: 'Delete'
+      }
+    }
+    networkProfile: {
+      networkInterfaces: [
+        {
+          id: networkInterface.id
+          properties: {
+            deleteOption: 'Delete'
+          }
+        }
+      ]
+    }
+    diagnosticsProfile: {
+      bootDiagnostics: {
+        enabled: true
+      }
+    }
+  }
+}
+
+// Reference to existing Key Vault (created in main.bicep)
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  name: ignitionReplacements.keyVaultName
+}
+
+// Reference to Key Vault Secrets User built-in role
+resource keyVaultSecretsUserRole 'Microsoft.Authorization/roleDefinitions@2022-04-01' existing = {
+  scope: subscription()
+  name: 'Key Vault Secrets User'
+}
+
+// Role assignment to grant VM access to Key Vault secrets
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVault.id, virtualMachine.id, 'Key Vault Secrets User')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: keyVaultSecretsUserRole.id
+    principalId: virtualMachine.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// Outputs
+@description('The resource ID of the Heimdall virtual machine')
+output virtualMachineId string = virtualMachine.id
+
+@description('The name of the Heimdall virtual machine')
+output virtualMachineName string = virtualMachine.name
+
+@description('The resource ID of the network interface')
+output networkInterfaceId string = networkInterface.id

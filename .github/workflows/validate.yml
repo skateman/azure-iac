@@ -27,10 +27,22 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP }}
           template-file: ./keyvault.bicep
+      - uses: azure/bicep-deploy@v2
+        id: keyvault-lookup
+        with:
+          name: lookup-keyvault-name
+          operation: create
+          type: deployment
+          scope: resourceGroup
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          template-file: ./keyvault.bicep
+          parameters: '{ "lookupOnly": true }'
       - run: envsubst < parameters.json.tmpl > parameters.json
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          KEYVAULT_NAME: ${{ steps.keyvault-lookup.outputs.keyVaultName }}
       - uses: azure/bicep-deploy@v2
         with:
           name: validate-main
