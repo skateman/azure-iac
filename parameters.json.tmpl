@@ -1,5 +1,30 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
-  "parameters": {}
+  "parameters": {
+    "sshPublicKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.KeyVault/vaults/${KEYVAULT_NAME}"
+        },
+        "secretName": "ssh-public-key"
+      }
+    },
+    "wgPrivateKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.KeyVault/vaults/${KEYVAULT_NAME}"
+        },
+        "secretName": "wg-private-key"
+      }
+    },
+    "wgIpAddress": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${AZURE_RESOURCE_GROUP}/providers/Microsoft.KeyVault/vaults/${KEYVAULT_NAME}"
+        },
+        "secretName": "wg-ip-address"
+      }
+    }
+  }
 }

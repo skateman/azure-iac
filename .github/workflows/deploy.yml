@@ -19,6 +19,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: azure/bicep-deploy@v2
+        id: keyvault-deploy
         with:
           name: deploy-keyvault
           operation: create
@@ -27,11 +28,12 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP }}
           template-file: ./keyvault.bicep
-
-      - run: envsubst < parameters.json.tmpl > parameters.json
+      - run: find . -name "*.tmpl" -exec sh -c 'envsubst "\$AZURE_SUBSCRIPTION_ID,\$AZURE_RESOURCE_GROUP,\$KEYVAULT_NAME" < "$1" > "${1%.tmpl}"' _ {} \;
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          KEYVAULT_NAME: ${{ steps.keyvault-deploy.outputs.keyVaultName }}
+      - run: find . -name "ignition.yml" -exec sh -c 'cat "$1" | docker run --rm -i quay.io/coreos/butane:latest > "${1%.yml}.json"' _ {} \;
       - uses: azure/bicep-deploy@v2
         with:
           name: deploy-main

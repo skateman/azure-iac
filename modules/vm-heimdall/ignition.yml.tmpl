@@ -1,0 +1,156 @@
+variant: flatcar
+version: 1.0.0
+
+systemd:
+  units:
+    - name: wireguard-manager.timer
+      enabled: true
+
+storage:
+  files:
+    # WireGuard netdev configuration (empty, managed by wireguard-manager)
+    - path: /etc/systemd/network/10-wg0.netdev
+      mode: 0640
+      group:
+        name: systemd-network
+      contents:
+        inline: ""
+
+    # WireGuard network configuration (empty, managed by wireguard-manager)
+    - path: /etc/systemd/network/10-wg0.network
+      mode: 0640
+      group:
+        name: systemd-network
+      contents:
+        inline: ""
+
+    # Enable IP forwarding
+    - path: /etc/sysctl.d/99-wireguard.conf
+      mode: 0644
+      contents:
+        inline: |-
+          net.ipv4.ip_forward = 1
+
+    # WireGuard manager script
+    - path: /opt/bin/wireguard-manager.sh
+      mode: 0755
+      contents:
+        inline: |-
+          #!/bin/bash
+
+          set -euo pipefail
+
+          # Use Key Vault name passed as parameter
+          KEYVAULT_NAME="${KEYVAULT_NAME}"
+
+          NETDEV_CONFIG="/etc/systemd/network/10-wg0.netdev"
+          NETWORK_CONFIG="/etc/systemd/network/10-wg0.network"
+
+          echo "Checking for WireGuard configuration updates"
+
+          # Get current combined hash of both config files
+          current_hash=$(cat "$NETDEV_CONFIG" "$NETWORK_CONFIG" | sha256sum | cut -d' ' -f1)
+
+          # Get access token from Azure Instance Metadata Service
+          echo "Getting access token from managed identity..."
+          ACCESS_TOKEN=$(curl -s -H "Metadata: true" \
+            "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https://vault.azure.net" \
+            | jq -r '.access_token')
+
+          if [[ -z "$ACCESS_TOKEN" || "$ACCESS_TOKEN" == "null" ]]; then
+            echo "Failed to get access token"
+            exit 1
+          fi
+
+          # Function to get secret from Key Vault
+          get_secret() {
+            local secret_name="$1"
+            curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+              "https://${KEYVAULT_NAME}.vault.azure.net/secrets/${secret_name}?api-version=7.4" \
+              | jq -r '.value'
+          }
+
+          # Retrieve WireGuard private key and IP address from Key Vault
+          echo "Retrieving WireGuard configuration from Key Vault..."
+          wg_private_key=$(get_secret "wg-private-key")
+          wg_ip_address=$(get_secret "wg-ip-address")
+
+          # Generate netdev configuration
+          cat > "$NETDEV_CONFIG" << EOF
+          [NetDev]
+          Name=wg0
+          Kind=wireguard
+          Description=WireGuard
+
+          [WireGuard]
+          PrivateKey=$wg_private_key
+          ListenPort=51820
+          EOF
+
+          # List all peer secrets and add them to the netdev file
+          peer_secrets=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
+            "https://${KEYVAULT_NAME}.vault.azure.net/secrets?api-version=7.4" \
+            | jq -r '.value[].id' | grep -E '/wg-peer-[^/]*$' | sed 's|.*/||' | sort -V)
+
+          for secret_name in $peer_secrets; do
+            peer_value=$(get_secret "$secret_name")
+            echo -e "\n[WireGuardPeer]\n$peer_value" >> "$NETDEV_CONFIG"
+          done
+
+          # Generate network configuration
+          cat > "$NETWORK_CONFIG" << EOF
+          [Match]
+          Name=wg0
+
+          [Network]
+          Address=$wg_ip_address/24
+          IPForward=yes
+          IPMasquerade=yes
+          EOF
+
+          # Check if files actually changed
+          new_hash=$(cat "$NETDEV_CONFIG" "$NETWORK_CONFIG" | sha256sum | cut -d' ' -f1)
+
+          if [[ "$new_hash" == "$current_hash" ]]; then
+            echo "No configuration changes detected."
+            exit 0
+          fi
+
+          echo "Configuration changes detected, WireGuard configuration updated."
+
+          # Reload network configuration
+          networkctl reload
+
+          echo "WireGuard configuration updated successfully."
+
+    # Systemd service for WireGuard manager
+    - path: /etc/systemd/system/wireguard-manager.service
+      mode: 0644
+      contents:
+        inline: |-
+          [Unit]
+          Description=WireGuard Manager
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          User=root
+          ExecStart=/opt/bin/wireguard-manager.sh
+
+    # Timer for WireGuard manager (runs every 5 minutes)
+    - path: /etc/systemd/system/wireguard-manager.timer
+      mode: 0644
+      contents:
+        inline: |-
+          [Unit]
+          Description=Run WireGuard Manager every 5 minutes
+          Requires=wireguard-manager.service
+
+          [Timer]
+          OnBootSec=1min
+          OnUnitActiveSec=5min
+          AccuracySec=30s
+
+          [Install]
+          WantedBy=timers.target
