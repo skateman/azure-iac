@@ -20,6 +20,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - uses: azure/bicep-deploy@v2
         with:
+          name: deploy-keyvault
           operation: create
           type: deployment
           scope: resourceGroup
@@ -33,6 +34,7 @@ jobs:
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
       - uses: azure/bicep-deploy@v2
         with:
+          name: deploy-main
           operation: create
           type: deployment
           scope: resourceGroup
