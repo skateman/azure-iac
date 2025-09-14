@@ -38,7 +38,8 @@ jobs:
           resource-group-name: ${{ secrets.AZURE_RESOURCE_GROUP }}
           template-file: ./keyvault.bicep
           parameters: '{ "lookupOnly": true }'
-      - run: envsubst < parameters.json.tmpl > parameters.json
+      - name: Process template files
+        run: find . -name "*.tmpl" -exec sh -c 'envsubst < "$1" > "${1%.tmpl}"' _ {} \;
         env:
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
