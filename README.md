@@ -15,16 +15,15 @@ az group create --name <rgName> --location <rgLocation>
 ```
 
 ### OIDC for GitHub in Azure
-1. Create an application, a service principal with a Contributor role assigned:
+1. Create an application and a service principal:
 ```sh
 az ad app create --display-name "github-oidc-app" --sign-in-audience AzureADMyOrg
 az ad sp create --id <appId>
-az role assignment create --assignee <appId> --role Contributor --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
 
-2. Create a `keyvault-deploy-role.json` file with the custom role definition:
-```json
-{
+2. Create a custom role for accessing the Key Vault for deployment
+```sh
+az role definition create --role-definition '{
   "Name": "Key Vault Deploy Only",
   "Description": "Allows ARM to resolve Key Vault parameter references during deployment",
   "Actions": [
@@ -33,42 +32,82 @@ az role assignment create --assignee <appId> --role Contributor --scope /subscri
   "AssignableScopes": [
     "/subscriptions/2844d552-9b86-4816-a7b6-32b5ac13512d"
   ]
-}
+}'
 ```
 
-3. Create the custom role and assign it to the service principal:
+3. Create a custom role for assigning Key Vault access to Managed Identities:
 ```sh
-az role definition create --role-definition @keyvault-deploy-role.json
-az role assignment create --assignee <appId> --role "Key Vault Deploy Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
+az role definition create --role-definition '{
+  "Name": "Key Vault Access Grantor",
+  "Description": "Allows granting Key Vault Secrets User role to Managed Identities only under a Resource Group",
+  "Actions": [
+    "Microsoft.Authorization/roleAssignments/write",
+    "Microsoft.Authorization/roleAssignments/read",
+    "Microsoft.Authorization/roleDefinitions/read"
+  ],
+  "AssignableScopes": [
+    "/subscriptions/<subId>/resourceGroups/<rgName>"
+  ]
+}'
 ```
 
-4. Create two JSON files that defining federated credentials:
-```json
-// federated-deploy.json
-{
+3. Create a custom Azure Policy that prevents self-assignment of Key Vault access:
+```sh
+az policy definition create \
+  --name "prevent-github-oidc-self-assignment" \
+  --display-name "Prevent GitHub OIDC Self-Assignment" \
+  --description "Prevents GitHub OIDC Service Principal from assigning roles to itself" \
+  --mode "All" \
+  --rules '{
+    "if": {
+      "allOf": [
+        {
+          "field": "type",
+          "equals": "Microsoft.Authorization/roleAssignments"
+        },
+        {
+          "value": "[requestContext().identity.appid]",
+          "equals": "<appId>"
+        },
+        {
+          "field": "Microsoft.Authorization/roleAssignments/principalId",
+          "equals": "<appId>"
+        }
+      ]
+    },
+    "then": {
+      "effect": "deny"
+    }
+  }'
+
+az policy assignment create --name "no-github-oidc-self-assignment" --policy "prevent-github-oidc-self-assignment" --scope "/subscriptions/<subId>/resourceGroups/<rgName>"
+```
+
+4. Assign the Contributor role and the custom roles to the Service Principal:
+```sh
+az role assignment create --assignee <appId> --role Contributor --scope /subscriptions/<subId>/resourceGroups/<rgName>
+az role assignment create --assignee <appId> --role "Key Vault Deploy Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
+az role assignment create --assignee <appId> --role "Key Vault Access Grantor" --scope /subscriptions/<subId>/resourceGroups/<rgName>
+```
+
+4. Create federated credentials for GitHub:
+```sh
+az ad app federated-credential create --id <appId> --parameters '{
   "name": "github-oidc-deploy",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:<user>/<repo>:refs/heads/master",
   "audiences": [
     "api://AzureADTokenExchange"
   ]
-}
-
-// federated-validate.json
-{
+}'
+az ad app federated-credential create --id <appId> --parameters '{
   "name": "github-oidc-validate",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:<user>/<repo>:pull_request",
   "audiences": [
     "api://AzureADTokenExchange"
   ]
-}
-```
-
-5. Apply the files against the created application:
-```sh
-az ad app federated-credential create --id <appId> --parameters @federated-deploy.json
-az ad app federated-credential create --id <appId> --parameters @federated-validate.json
+}'
 ```
 
 6. In the repository set the following secrets:
@@ -83,9 +122,9 @@ The pipeline deploys two bicep files after each other. The first step is the cre
 
 As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy. By default, not even the owner of the Resource Group has access to the contents of the Key Vault. Our proposed approach is to create a role that enables the creation but not the reading of secrets and assign it to a user:
 
-1. Create the `keyvault-wo-role.json` file with the custom role definition:
-```json
-{
+1. Create a custom role:
+```sh
+az role definition create --role-definition '{
   "Name": "Key Vault Secrets Write Only",
   "Description": "Can create, write, and list Key Vault secrets but cannot read secret values",
   "Actions": [],
@@ -97,15 +136,10 @@ As long as the Key Vault does not contain these secrets, the resources defined i
   "AssignableScopes": [
     "/subscriptions/2844d552-9b86-4816-a7b6-32b5ac13512d"
   ]
-}
+}'
 ```
 
-2. Create the custom role:
-```sh
-az role definition create --role-definition @keyvault-wo-role.json
-```
-
-3. Assign the custom role to your user:
+2. Assign the custom role to your user:
 ```sh
 az role assignment create --assignee <userId> --role "Key Vault Secrets Write Only" --scope /subscriptions/<subId>/resourceGroups/<rgName>
 ```
