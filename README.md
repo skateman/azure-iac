@@ -9,6 +9,10 @@ The two templates in the root directory describe the following resources:
 * Virtual Machine - `vm-heimdall`
   * With a public IP
   * Exposing WireGuard
+* Virtual Machine - `vm-hamlah27`
+  * Without a public IP
+  * Accessible via `vm-heimdall`
+  * Running Home Assistant OS
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
@@ -151,6 +155,22 @@ az role assignment create --assignee <userId> --role "Key Vault Secrets Write On
 ```
 
 After this your user can populate the Key Vault with the required secrets without being able to read them.
+
+### HAOS base image
+The Home Assistant Operating System [image](https://github.com/home-assistant/operating-system/releases) is only published in VHDX format, which is not supported by Azure. Therefore, you have to convert it to fixed-size VHD after unzipping:
+```powershell
+Convert-VHD -Path "haos_ova-xx.y.vhdx" -DestinationPath "haos.vhd" -VHDType Fixed
+```
+
+Unfortunately, uploading the image turned out to be the biggest challenge, the only way it was sucessful was to use the Azure Storage Explorer with the following parameters:
+* Disk name: hamlah27
+* OS type: Linux
+* Availability Zone: None
+* Account type: Premium SSD
+* Hyper-V generation: V2
+* Architecture: x64
+
+It is important that you name the image `hamlah27` as ARM will expect it under this name.
 
 ## Troubleshooting
 The VM deployment might fail if you have not accepted the license agreements for the SKU. Unfortunately, this cannot be done via bicep:

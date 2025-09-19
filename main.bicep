@@ -18,6 +18,9 @@ param wgPrivateKey string
 @secure()
 param wgIpAddress string
 
+@description('HAOS custom image resource ID for Hamlah27 VM')
+param haosImageId string
+
 // Metadata
 metadata name = 'azure-iac'
 metadata description = 'Main Bicep template for declarative Azure resource management'
@@ -34,6 +37,15 @@ module heimdallVM 'modules/vm-heimdall/main.bicep' = {
   params: {
     sshPublicKey: sshPublicKey
     subnetId: bifrostNetwork.outputs.defaultSubnetId
+  }
+}
+
+// Deploy Hamlah27 Virtual Machine
+module hamlah27VM 'modules/vm-hamlah27/main.bicep' = {
+  name: 'vm-hamlah27'
+  params: {
+    subnetId: bifrostNetwork.outputs.defaultSubnetId
+    haosImageId: haosImageId
   }
 }
 
