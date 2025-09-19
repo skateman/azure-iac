@@ -29,6 +29,9 @@ metadata version = '1.0.0'
 // Deploy Bifrost Virtual Network
 module bifrostNetwork 'modules/vnet-bifrost/main.bicep' = {
   name: 'vnet-bifrost'
+  params: {
+    wgIpAddress: wgIpAddress
+  }
 }
 
 // Deploy Heimdall Virtual Machine

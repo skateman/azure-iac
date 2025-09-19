@@ -1,3 +1,8 @@
+// Virtual Network Bifrost Module
+@description('WireGuard IP address/network range')
+@secure()
+param wgIpAddress string
+
 // Virtual Network
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'vnet-bifrost'
@@ -38,6 +43,19 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           destinationAddressPrefix: '10.45.9.0/24'
           access: 'Allow'
           priority: 1000
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'AllowWireGuardClients'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '${substring(wgIpAddress, 0, lastIndexOf(wgIpAddress, '.'))}.0/24'
+          destinationAddressPrefix: '10.45.9.0/24'
+          access: 'Allow'
+          priority: 1010
           direction: 'Inbound'
         }
       }
