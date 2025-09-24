@@ -72,6 +72,19 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           direction: 'Outbound'
         }
       }
+      {
+        name: 'AllowWireGuardInbound'
+        properties: {
+          protocol: 'UDP'
+          sourcePortRange: '*'
+          destinationPortRange: '51820'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefix: '10.45.9.9'
+          access: 'Allow'
+          priority: 1020
+          direction: 'Inbound'
+        }
+      }
     ]
   }
 }
