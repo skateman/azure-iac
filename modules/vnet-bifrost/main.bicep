@@ -3,6 +3,24 @@
 @secure()
 param wgIpAddress string
 
+// Route Table to override Azure's default 10.0.0.0/8 drop route
+resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
+  name: 'rt-bifrost'
+  location: resourceGroup().location
+  properties: {
+    routes: [
+      {
+        name: 'route-to-wireguard'
+        properties: {
+          addressPrefix: '${substring(wgIpAddress, 0, lastIndexOf(wgIpAddress, '.'))}.0/24'
+          nextHopType: 'VirtualAppliance'
+          nextHopIpAddress: '10.45.9.9' // Heimdall
+        }
+      }
+    ]
+  }
+}
+
 // Virtual Network
 resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
   name: 'vnet-bifrost'
@@ -20,6 +38,9 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
           addressPrefix: '10.45.9.0/24' // 10.45.9.1 - 10.45.9.254 (254 usable IPs)
           networkSecurityGroup: {
             id: networkSecurityGroup.id
+          }
+          routeTable: {
+            id: routeTable.id
           }
         }
       }
