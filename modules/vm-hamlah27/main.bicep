@@ -31,7 +31,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2023-09-01' = {
   location: resourceGroup().location
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_B2ats_v2'
+      vmSize: 'Standard_B2als_v2'
     }
     storageProfile: {
       osDisk: {
