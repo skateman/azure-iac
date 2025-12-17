@@ -9,6 +9,9 @@ param sshPublicKey string
 @description('Subnet resource ID for the VM')
 param subnetId string
 
+@description('Set to true only when creating the VM for the first time (customData can only be set on initial creation)')
+param initialDeploy bool = false
+
 // Public IP for Heimdall
 resource publicIP 'Microsoft.Network/publicIPAddresses@2023-11-01' = {
   name: 'pip-heimdall'
@@ -90,7 +93,7 @@ resource virtualMachine 'Microsoft.Compute/virtualMachines@2023-09-01' = {
     osProfile: {
       computerName: 'heimdall'
       adminUsername: adminUsername
-      customData: base64(loadTextContent('ignition.json'))
+      customData: initialDeploy ? base64(loadTextContent('ignition.json')) : null
       linuxConfiguration: {
         disablePasswordAuthentication: true
         provisionVMAgent: true
