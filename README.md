@@ -13,6 +13,9 @@ The two templates in the root directory describe the following resources:
   * Without a public IP
   * Accessible via `vm-heimdall`
   * Running Home Assistant OS
+* Function App - `fn-nexus`
+  * Node.js 22 runtime
+  * Running functions from https://github.com/skateman/nexus
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.

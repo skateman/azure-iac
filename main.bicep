@@ -52,6 +52,11 @@ module hamlah27VM 'modules/vm-hamlah27/main.bicep' = {
   }
 }
 
+// Deploy Nexus Function App
+module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
+  name: 'fn-nexus'
+}
+
 // Outputs
 @description('The resource group name where resources are deployed')
 output resourceGroupName string = resourceGroup().name
