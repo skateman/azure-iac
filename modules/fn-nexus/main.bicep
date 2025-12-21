@@ -6,6 +6,27 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
   name: 'kv-${uniqueString(resourceGroup().id)}'
 }
 
+// Key Vault secret names (env var names are derived: uppercase + underscores)
+var secretNames = [
+  'browserless-token'
+  'dobijecka-tg-token'
+  'orlen-username'
+  'orlen-password'
+]
+
+var keyVaultAppSettings = [for secretName in secretNames: {
+  name: toUpper(replace(secretName, '-', '_'))
+  value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${secretName})'
+}]
+
+// Reference existing secrets in Key Vault
+resource secrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = [
+  for secretName in secretNames: {
+    parent: keyVault
+    name: secretName
+  }
+]
+
 // Storage account for the Function App (required for Flex Consumption)
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   name: 'st${replace(functionAppName, '-', '')}${uniqueString(resourceGroup().id)}'
@@ -118,48 +139,35 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     }
     siteConfig: {
       minTlsVersion: '1.2'
-      appSettings: [
-        {
-          name: 'AzureWebJobsStorage__blobServiceUri'
-          value: storageAccount.properties.primaryEndpoints.blob
-        }
-        {
-          name: 'AzureWebJobsStorage__queueServiceUri'
-          value: storageAccount.properties.primaryEndpoints.queue
-        }
-        {
-          name: 'AzureWebJobsStorage__tableServiceUri'
-          value: storageAccount.properties.primaryEndpoints.table
-        }
-        {
-          name: 'AzureWebJobsStorage__credential'
-          value: 'managedidentity'
-        }
-        {
-          name: 'AzureWebJobsStorage__clientId'
-          value: managedIdentity.properties.clientId
-        }
-        {
-          name: 'BROWSERLESS_TOKEN'
-          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=browserless-token)'
-        }
-        {
-          name: 'DOBIJECKA_TG_TOKEN'
-          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=dobijecka-tg-token)'
-        }
-        {
-          name: 'ORLEN_USERNAME'
-          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=orlen-username)'
-        }
-        {
-          name: 'ORLEN_PASSWORD'
-          value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=orlen-password)'
-        }
-        {
-          name: 'ORLEN_DISCOUNT'
-          value: '2.20'
-        }
-      ]
+      appSettings: concat(
+        [
+          {
+            name: 'AzureWebJobsStorage__blobServiceUri'
+            value: storageAccount.properties.primaryEndpoints.blob
+          }
+          {
+            name: 'AzureWebJobsStorage__queueServiceUri'
+            value: storageAccount.properties.primaryEndpoints.queue
+          }
+          {
+            name: 'AzureWebJobsStorage__tableServiceUri'
+            value: storageAccount.properties.primaryEndpoints.table
+          }
+          {
+            name: 'AzureWebJobsStorage__credential'
+            value: 'managedidentity'
+          }
+          {
+            name: 'AzureWebJobsStorage__clientId'
+            value: managedIdentity.properties.clientId
+          }
+          {
+            name: 'ORLEN_DISCOUNT'
+            value: '2.20'
+          }
+        ],
+        keyVaultAppSettings
+      )
     }
     keyVaultReferenceIdentity: managedIdentity.id
   }
@@ -188,16 +196,30 @@ resource storageAccountContributorRoleAssignment 'Microsoft.Authorization/roleAs
   }
 }
 
-// Role assignment: Key Vault Secrets User for the managed identity
-resource keyVaultSecretsUserRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, managedIdentity.id, 'Key Vault Secrets User')
-  scope: keyVault
+// Role assignment: Storage Table Data Contributor for the managed identity
+// Required for table read/write access
+resource storageTableDataContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storageAccount.id, managedIdentity.id, 'Storage Table Data Contributor')
+  scope: storageAccount
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '0a9a7e1f-b9d0-4cc4-a60d-0319b160aaa3')
     principalId: managedIdentity.properties.principalId
     principalType: 'ServicePrincipal'
   }
 }
+
+// Role assignments: Key Vault Secrets User for each specific secret
+resource secretRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for (secretName, i) in secretNames: {
+    name: guid(secrets[i].id, managedIdentity.id, 'Key Vault Secrets User')
+    scope: secrets[i]
+    properties: {
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+      principalId: managedIdentity.properties.principalId
+      principalType: 'ServicePrincipal'
+    }
+  }
+]
 
 // Outputs
 @description('The resource ID of the Function App')
