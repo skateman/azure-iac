@@ -16,6 +16,8 @@ The two templates in the root directory describe the following resources:
 * Function App - `fn-nexus`
   * Node.js 22 runtime
   * Running functions from https://github.com/skateman/nexus
+* Azure OpenAI - `oai-roman`
+  * GPT-5-nano model with Data Zone deployment
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.
