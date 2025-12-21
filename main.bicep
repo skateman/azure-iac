@@ -57,6 +57,16 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
   name: 'fn-nexus'
 }
 
+// Azure Open AI
+module openAIRoman 'modules/openai/main.bicep' = {
+  name: 'oai-roman'
+  params: {
+    modelName: 'gpt-5-nano'
+    modelVersion: '2025-08-07'
+    capacity: 100
+  }
+}
+
 // Outputs
 @description('The resource group name where resources are deployed')
 output resourceGroupName string = resourceGroup().name
