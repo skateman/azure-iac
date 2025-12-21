@@ -88,6 +88,19 @@ resource managedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   location: resourceGroup().location
 }
 
+// Federated credential for GitHub Actions deployment
+resource federatedCredential 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = {
+  parent: managedIdentity
+  name: 'github-actions'
+  properties: {
+    issuer: 'https://token.actions.githubusercontent.com'
+    subject: 'repo:skateman/nexus:ref:refs/heads/master'
+    audiences: [
+      'api://AzureADTokenExchange'
+    ]
+  }
+}
+
 // Flex Consumption plan (serverless, free tier)
 resource hostingPlan 'Microsoft.Web/serverfarms@2024-11-01' = {
   name: 'asp-${functionAppName}'
@@ -220,6 +233,17 @@ resource secretRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-
     }
   }
 ]
+
+// Role assignment: Website Contributor for GitHub Actions deployment
+resource websiteContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(functionApp.id, managedIdentity.id, 'Website Contributor')
+  scope: functionApp
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'de139f84-1756-47ae-9be6-808fbbe84772')
+    principalId: managedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // Outputs
 @description('The resource ID of the Function App')
