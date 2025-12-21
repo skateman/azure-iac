@@ -155,6 +155,10 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       appSettings: concat(
         [
           {
+            name: 'AzureWebJobsStorage__accountName'
+            value: storageAccount.name
+          }
+          {
             name: 'AzureWebJobsStorage__blobServiceUri'
             value: storageAccount.properties.primaryEndpoints.blob
           }
