@@ -155,6 +155,10 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
       appSettings: concat(
         [
           {
+            name: 'AZURE_CLIENT_ID'
+            value: '5efaa192-7c8c-48ad-b89a-87d0e226a3bf'
+          }
+          {
             name: 'AzureWebJobsStorage__accountName'
             value: storageAccount.name
           }
