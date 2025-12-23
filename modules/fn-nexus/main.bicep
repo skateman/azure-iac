@@ -13,6 +13,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
 // Key Vault secret names (env var names are derived: uppercase + underscores)
 var secretNames = [
   'browserless-token'
+  'dobijecka-tg-chat-id'
   'dobijecka-tg-token'
   'orlen-username'
   'orlen-password'
