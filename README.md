@@ -18,6 +18,7 @@ The two templates in the root directory describe the following resources:
   * Running functions from https://github.com/skateman/nexus
 * Azure OpenAI - `oai-roman`
   * GPT-5-nano model with Data Zone deployment
+* Azure Speech Services - `speech`
 
 ## Setup
 First of all, you would need a resource group that ARM/bicep would fully manage. Ideally, this should be empty to avoid collisions with the reconciler.

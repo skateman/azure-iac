@@ -71,6 +71,11 @@ module openAIRoman 'modules/openai/main.bicep' = {
   }
 }
 
+// Azure Speech Services (TTS/STT)
+module speechRoman 'modules/speech/main.bicep' = {
+  name: 'speech'
+}
+
 // Outputs
 @description('The resource group name where resources are deployed')
 output resourceGroupName string = resourceGroup().name
