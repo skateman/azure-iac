@@ -55,6 +55,10 @@ module hamlah27VM 'modules/vm-hamlah27/main.bicep' = {
 // Deploy Nexus Function App
 module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
   name: 'fn-nexus'
+  params: {
+    sasStart: '2025-12-22T00:00:00Z'
+    sasExpiry: '2030-12-31T23:59:59Z'
+  }
 }
 
 // Azure Open AI

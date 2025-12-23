@@ -1,3 +1,7 @@
+// SAS token validity parameters
+param sasStart string = utcNow()
+param sasExpiry string = dateTimeAdd(utcNow(), 'P1Y')
+
 // Function App name
 var functionAppName = 'fn-nexus'
 
@@ -80,6 +84,24 @@ resource resultsContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
 resource tankartaTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
   parent: tableService
   name: 'tankarta'
+}
+
+// Container-level SAS token for read-only access to nexus-results, stored in Key Vault
+var serviceSasProperties = {
+  canonicalizedResource: '/blob/${storageAccount.name}/${resultsContainer.name}'
+  signedResource: 'c'
+  signedPermission: 'rl'
+  signedProtocol: 'https'
+  signedExpiry: sasExpiry
+  signedStart: sasStart
+}
+
+resource storageSasSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'nexus-results'
+  properties: {
+    value: '?${storageAccount.listServiceSas('2023-05-01', serviceSasProperties).serviceSasToken}'
+  }
 }
 
 // User-assigned managed identity for the Function App
