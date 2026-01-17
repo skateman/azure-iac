@@ -62,8 +62,8 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
 }
 
 // Azure Open AI
-module openAIRoman 'modules/openai/main.bicep' = {
-  name: 'oai-roman'
+module openAI 'modules/openai/main.bicep' = {
+  name: 'oai'
   params: {
     modelName: 'gpt-5-nano'
     modelVersion: '2025-08-07'
