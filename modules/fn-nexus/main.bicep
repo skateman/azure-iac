@@ -2,6 +2,9 @@
 param sasStart string = utcNow()
 param sasExpiry string = dateTimeAdd(utcNow(), 'P1Y')
 
+@description('Subnet resource ID for Function App VNet integration (Gjallarhorn)')
+param gjallarhornSubnetId string
+
 // Function App name
 var functionAppName = 'fn-nexus'
 
@@ -153,6 +156,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     serverFarmId: hostingPlan.id
     httpsOnly: true
     publicNetworkAccess: 'Enabled'
+    virtualNetworkSubnetId: gjallarhornSubnetId
     functionAppConfig: {
       deployment: {
         storage: {

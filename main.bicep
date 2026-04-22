@@ -58,6 +58,7 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
   params: {
     sasStart: '2025-12-22T00:00:00Z'
     sasExpiry: '2030-12-31T23:59:59Z'
+    gjallarhornSubnetId: bifrostNetwork.outputs.gjallarhornSubnetId
   }
 }
 

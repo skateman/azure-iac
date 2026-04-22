@@ -29,19 +29,37 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
     addressSpace: {
       addressPrefixes: [
         '10.45.9.0/24'
+        '10.45.18.0/28' // longitude decimal (9.18°E), Flex Consumption integration
       ]
     }
     subnets: [
       {
         name: 'snet-bifrost'
         properties: {
-          addressPrefix: '10.45.9.0/24' // 10.45.9.1 - 10.45.9.254 (254 usable IPs)
+          addressPrefix: '10.45.9.0/24'
           networkSecurityGroup: {
             id: networkSecurityGroup.id
           }
           routeTable: {
             id: routeTable.id
           }
+        }
+      }
+      {
+        name: 'snet-gjallarhorn'
+        properties: {
+          addressPrefix: '10.45.18.0/28' // 10.45.18.1 - 10.45.18.14 (delegated to Flex Consumption, ~11 usable instances)
+          networkSecurityGroup: {
+            id: networkSecurityGroup.id
+          }
+          delegations: [
+            {
+              name: 'flex-consumption'
+              properties: {
+                serviceName: 'Microsoft.App/environments'
+              }
+            }
+          ]
         }
       }
     ]
@@ -60,8 +78,14 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           protocol: '*'
           sourcePortRange: '*'
           destinationPortRange: '*'
-          sourceAddressPrefix: '10.45.9.0/24'
-          destinationAddressPrefix: '10.45.9.0/24'
+          sourceAddressPrefixes: [
+            '10.45.9.0/24'
+            '10.45.18.0/28'
+          ]
+          destinationAddressPrefixes: [
+            '10.45.9.0/24'
+            '10.45.18.0/28'
+          ]
           access: 'Allow'
           priority: 1000
           direction: 'Inbound'
@@ -122,6 +146,9 @@ output defaultSubnetId string = virtualNetwork.properties.subnets[0].id
 
 @description('The name of the default subnet')
 output defaultSubnetName string = virtualNetwork.properties.subnets[0].name
+
+@description('The resource ID of the Gjallarhorn subnet (for Flex Consumption VNet integration)')
+output gjallarhornSubnetId string = virtualNetwork.properties.subnets[1].id
 
 @description('The resource ID of the network security group')
 output networkSecurityGroupId string = networkSecurityGroup.id
