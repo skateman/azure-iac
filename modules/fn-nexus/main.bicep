@@ -19,6 +19,10 @@ var secretNames = [
   'browserless-token'
   'dobijecka-tg-chat-id'
   'dobijecka-tg-token'
+  'garagekaktus-username'
+  'garagekaktus-password'
+  'garagekaktus-tg-chat-id'
+  'garagekaktus-tg-token'
   'orlen-username'
   'orlen-password'
 ]
