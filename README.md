@@ -16,8 +16,8 @@ The two templates in the root directory describe the following resources:
 * Function App - `fn-nexus`
   * Node.js 22 runtime
   * Running functions from https://github.com/skateman/nexus
-* Azure OpenAI - `oai-roman`
-  * GPT-5-nano model with Data Zone deployment
+* Azure OpenAI - `oai`
+  * GPT-4.1-nano model with Global deployment
 * Azure Speech Services - `speech`
 
 ## Setup
