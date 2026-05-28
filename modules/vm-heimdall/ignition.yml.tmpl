@@ -118,8 +118,8 @@ storage:
 
           echo "Configuration changes detected, WireGuard configuration updated."
 
-          # Reload network configuration
-          networkctl reload
+          # Restart systemd-networkd so .netdev changes (private key, peers) are re-applied
+          systemctl restart systemd-networkd
 
           echo "WireGuard configuration updated successfully."
 
