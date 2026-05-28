@@ -17,7 +17,7 @@ The two templates in the root directory describe the following resources:
   * Node.js 22 runtime
   * Running functions from https://github.com/skateman/nexus
 * Azure OpenAI - `oai`
-  * GPT-4.1-nano model with Global deployment
+  * GPT-5.4-nano model with Global deployment
 * Azure Speech Services - `speech`
 
 ## Setup

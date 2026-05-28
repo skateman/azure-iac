@@ -66,9 +66,9 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
 module openAI 'modules/openai/main.bicep' = {
   name: 'oai'
   params: {
-    modelName: 'gpt-4.1-nano'
-    modelVersion: '2025-04-14'
-    capacity: 100
+    modelName: 'gpt-5.4-nano'
+    modelVersion: '2026-03-17'
+    capacity: 250
   }
 }
 
