@@ -52,16 +52,6 @@ module hamlah27VM 'modules/vm-hamlah27/main.bicep' = {
   }
 }
 
-// Deploy Nexus Function App
-module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
-  name: 'fn-nexus'
-  params: {
-    sasStart: '2025-12-22T00:00:00Z'
-    sasExpiry: '2030-12-31T23:59:59Z'
-    gjallarhornSubnetId: bifrostNetwork.outputs.gjallarhornSubnetId
-  }
-}
-
 // Azure Open AI
 module openAI 'modules/openai/main.bicep' = {
   name: 'oai'
@@ -69,6 +59,17 @@ module openAI 'modules/openai/main.bicep' = {
     modelName: 'gpt-5.4-nano'
     modelVersion: '2026-03-17'
     capacity: 250
+  }
+}
+
+// Deploy Nexus Function App
+module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
+  name: 'fn-nexus'
+  params: {
+    sasStart: '2025-12-22T00:00:00Z'
+    sasExpiry: '2030-12-31T23:59:59Z'
+    gjallarhornSubnetId: bifrostNetwork.outputs.gjallarhornSubnetId
+    openAiDeployment: openAI.outputs.deploymentName
   }
 }
 

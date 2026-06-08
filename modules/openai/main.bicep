@@ -51,3 +51,6 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
 // Outputs
 @description('OpenAI account resource ID')
 output resourceId string = openAIAccount.id
+
+@description('Deployed model (deployment) name')
+output deploymentName string = modelDeployment.name

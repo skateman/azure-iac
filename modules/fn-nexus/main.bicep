@@ -5,6 +5,9 @@ param sasExpiry string = dateTimeAdd(utcNow(), 'P1Y')
 @description('Subnet resource ID for Function App VNet integration (Gjallarhorn)')
 param gjallarhornSubnetId string
 
+@description('Azure OpenAI deployment (model) name')
+param openAiDeployment string
+
 // Function App name
 var functionAppName = 'fn-nexus'
 
@@ -39,6 +42,23 @@ resource secrets 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = [
     name: secretName
   }
 ]
+
+// Reference the existing Azure OpenAI account (created by modules/openai) so we
+// can mint a Key Vault secret from its key for OpenAI-backed functions.
+resource openAiAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
+  name: 'oai'
+}
+
+// Store the Azure OpenAI account key in Key Vault. Functions read it via a Key
+// Vault reference App Setting (resolved by the Function App's
+// keyVaultReferenceIdentity). Generic name so any function can reuse it.
+resource openAiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'oai-key'
+  properties: {
+    value: openAiAccount.listKeys().key1
+  }
+}
 
 // Storage account for the Function App (required for Flex Consumption)
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
@@ -93,6 +113,23 @@ resource resultsContainer 'Microsoft.Storage/storageAccounts/blobServices/contai
 resource tankartaTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
   parent: tableService
   name: 'tankarta'
+}
+
+// Tankstelle tables (the app also creates these at runtime; declared here for
+// deterministic infrastructure). Names must match server/src/db/client.ts.
+resource tankstelleVehiclesTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
+  parent: tableService
+  name: 'vehicles'
+}
+
+resource tankstelleFuelingsTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
+  parent: tableService
+  name: 'fuelings'
+}
+
+resource tankstelleOcrAttemptsTable 'Microsoft.Storage/storageAccounts/tableServices/tables@2023-05-01' = {
+  parent: tableService
+  name: 'ocrAttempts'
 }
 
 // Container-level SAS token for read-only access to nexus-results, stored in Key Vault
@@ -188,7 +225,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
         [
           {
             name: 'AZURE_CLIENT_ID'
-            value: '5efaa192-7c8c-48ad-b89a-87d0e226a3bf'
+            value: managedIdentity.properties.clientId
           }
           {
             name: 'AzureWebJobsStorage__accountName'
@@ -217,6 +254,25 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           {
             name: 'ORLEN_DISCOUNT'
             value: '2.20'
+          }
+          // Azure OpenAI for OpenAI-backed functions (e.g. Tankstelle OCR).
+          // Endpoint + deployment are plain; the key is resolved from Key Vault
+          // by keyVaultReferenceIdentity.
+          {
+            name: 'AZURE_OPENAI_ENDPOINT'
+            value: openAiAccount.properties.endpoint
+          }
+          {
+            name: 'AZURE_OPENAI_DEPLOYMENT'
+            value: openAiDeployment
+          }
+          {
+            name: 'AZURE_OPENAI_API_VERSION'
+            value: '2024-10-21'
+          }
+          {
+            name: 'AZURE_OPENAI_API_KEY'
+            value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${openAiKeySecret.name})'
           }
         ],
         keyVaultAppSettings
@@ -273,6 +329,18 @@ resource secretRoleAssignments 'Microsoft.Authorization/roleAssignments@2022-04-
     }
   }
 ]
+
+// Role assignment: Key Vault Secrets User for the Azure OpenAI key secret.
+// (Created in-module, so it can't be part of the `existing` secrets loop above.)
+resource openAiSecretRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(openAiKeySecret.id, managedIdentity.id, 'Key Vault Secrets User')
+  scope: openAiKeySecret
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    principalId: managedIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
 
 // Role assignment: Website Contributor for GitHub Actions deployment
 resource websiteContributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
