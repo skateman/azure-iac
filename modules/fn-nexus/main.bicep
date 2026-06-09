@@ -8,6 +8,12 @@ param gjallarhornSubnetId string
 @description('Azure OpenAI deployment (model) name')
 param openAiDeployment string
 
+@description('Comma-separated allowed CORS origins for the API. Empty allows any.')
+param corsAllowedOrigins string = ''
+
+@description('SPA app registration client id')
+param spaClientId string
+
 // Function App name
 var functionAppName = 'fn-nexus'
 
@@ -28,6 +34,7 @@ var secretNames = [
   'garagekaktus-tg-token'
   'orlen-username'
   'orlen-password'
+  'owner-oid'
 ]
 
 var keyVaultAppSettings = [for secretName in secretNames: {
@@ -255,9 +262,6 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
             name: 'ORLEN_DISCOUNT'
             value: '2.20'
           }
-          // Azure OpenAI for OpenAI-backed functions (e.g. Tankstelle OCR).
-          // Endpoint + deployment are plain; the key is resolved from Key Vault
-          // by keyVaultReferenceIdentity.
           {
             name: 'AZURE_OPENAI_ENDPOINT'
             value: openAiAccount.properties.endpoint
@@ -274,11 +278,62 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
             name: 'AZURE_OPENAI_API_KEY'
             value: '@Microsoft.KeyVault(VaultName=${keyVault.name};SecretName=${openAiKeySecret.name})'
           }
+          {
+            name: 'REQUIRE_AUTH'
+            value: 'true'
+          }
+          {
+            name: 'CORS_ALLOWED_ORIGINS'
+            value: corsAllowedOrigins
+          }
         ],
         keyVaultAppSettings
       )
     }
     keyVaultReferenceIdentity: managedIdentity.id
+  }
+}
+
+// App Service Authentication
+resource functionAppAuth 'Microsoft.Web/sites/config@2024-11-01' = {
+  parent: functionApp
+  name: 'authsettingsV2'
+  properties: {
+    platform: {
+      enabled: true
+    }
+    globalValidation: {
+      requireAuthentication: true
+      unauthenticatedClientAction: 'Return401'
+      // Health stays open for Static Web App / monitoring probes.
+      excludedPaths: [
+        '/api/tankstelle/health'
+      ]
+    }
+    identityProviders: {
+      azureActiveDirectory: {
+        enabled: true
+        registration: {
+          // v2 issuer to match the SPA's v2 access tokens
+          // (app-registration.bicep sets requestedAccessTokenVersion: 2).
+          openIdIssuer: '${environment().authentication.loginEndpoint}${tenant().tenantId}/v2.0'
+          clientId: spaClientId
+        }
+        validation: {
+          // v2 access token `aud` is the application (client) id.
+          allowedAudiences: [
+            spaClientId
+          ]
+        }
+      }
+    }
+    login: {
+      // Pure token-validation gateway for a SPA/API: no login redirects, no
+      // server-side session/token store.
+      tokenStore: {
+        enabled: false
+      }
+    }
   }
 }
 

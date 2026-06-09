@@ -21,6 +21,26 @@ param wgIpAddress string
 @description('HAOS custom managed disk resource ID for Hamlah27 VM')
 param haosDiskId string
 
+@description('Comma-separated app names hosted on the platform, resolved from Key Vault.')
+@secure()
+param apps string
+
+@description('Domain suffix for the apps, resolved from Key Vault.')
+@secure()
+param appsDomainSuffix string
+
+@description('SPA app registration client id')
+@secure()
+param spaClientId string
+
+@description('Static Web App control-plane region (SWA is not available in every region).')
+param swaLocation string = 'westeurope'
+
+// Derived: per-app origins and the CORS allowlist (<app>.<suffix>).
+var appList = split(apps, ',')
+var corsArray = [for app in appList: 'https://${app}.${appsDomainSuffix}']
+var corsAllowedOrigins = join(corsArray, ',')
+
 // Metadata
 metadata name = 'azure-iac'
 metadata description = 'Main Bicep template for declarative Azure resource management'
@@ -70,6 +90,8 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
     sasExpiry: '2030-12-31T23:59:59Z'
     gjallarhornSubnetId: bifrostNetwork.outputs.gjallarhornSubnetId
     openAiDeployment: openAI.outputs.deploymentName
+    corsAllowedOrigins: corsAllowedOrigins
+    spaClientId: spaClientId
   }
 }
 
@@ -77,6 +99,18 @@ module nexusFunctionApp 'modules/fn-nexus/main.bicep' = {
 module speechRoman 'modules/speech/main.bicep' = {
   name: 'speech'
 }
+
+// PWA hosting — one Static Web App (Free tier) per app. Custom domains are bound
+// once, out-of-band (see README), so they are not managed here.
+module appSwas 'modules/static-web-app/main.bicep' = [
+  for app in appList: {
+    name: 'swa-${app}'
+    params: {
+      appName: app
+      location: swaLocation
+    }
+  }
+]
 
 // Outputs
 @description('The resource group name where resources are deployed')
