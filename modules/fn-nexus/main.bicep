@@ -228,6 +228,10 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
     }
     siteConfig: {
       minTlsVersion: '1.2'
+      cors: {
+        allowedOrigins: split(corsAllowedOrigins, ',')
+        supportCredentials: false
+      }
       appSettings: concat(
         [
           {
@@ -282,10 +286,6 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
             name: 'REQUIRE_AUTH'
             value: 'true'
           }
-          {
-            name: 'CORS_ALLOWED_ORIGINS'
-            value: corsAllowedOrigins
-          }
         ],
         keyVaultAppSettings
       )
@@ -305,10 +305,6 @@ resource functionAppAuth 'Microsoft.Web/sites/config@2024-11-01' = {
     globalValidation: {
       requireAuthentication: true
       unauthenticatedClientAction: 'Return401'
-      // Health stays open for Static Web App / monitoring probes.
-      excludedPaths: [
-        '/api/tankstelle/health'
-      ]
     }
     identityProviders: {
       azureActiveDirectory: {
