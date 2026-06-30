@@ -14,7 +14,7 @@ Declarative configuration of an Azure resource group with reconciliation.
   * Accessible via `vm-heimdall`
   * Running Home Assistant OS
 * Function App - `fn-nexus`
-  * Node.js 22 runtime
+  * Node.js 24 runtime
   * Running functions from https://github.com/skateman/nexus
   * Hosts the SPA platform APIs under `/api/<app>/*`
 * Azure OpenAI - `oai`
