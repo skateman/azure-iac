@@ -26,6 +26,8 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
 var secretNames = [
   'aisfriends-token'
   'browserless-token'
+  'deathcross-tg-chat-id'
+  'deathcross-tg-token'
   'dobijecka-tg-chat-id'
   'dobijecka-tg-token'
   'garagekaktus-username'
