@@ -141,9 +141,19 @@ The pipeline deploys two bicep files after each other. The first step is the cre
 * `wg-ip-address`
 * `wg-private-key`
 * `wg-peer-*`
+* `tuya-devices` - JSON object mapping onsite Tuya device names to IP addresses
 * `spa-client-id`, `owner-oid`, `apps`, `apps-domain-suffix` - see [app-registration script](#shared-spa-app-registration)
 
 As long as the Key Vault does not contain these secrets, the resources defined in the `main.bicep` will fail to deploy. By default, not even the owner of the Resource Group has access to the contents of the Key Vault. Our proposed approach is to create a role that enables the creation but not the reading of secrets and assign it to a user:
+
+The `tuya-devices` secret must contain a JSON object. Each property name becomes part of an
+Azure route name, so use only letters, numbers, hyphens, underscores, and periods:
+
+```json
+{
+  "air-conditioner": "192.168.1.2"
+}
+```
 
 1. Create a custom role:
 ```sh

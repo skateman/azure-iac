@@ -18,6 +18,10 @@ param wgPrivateKey string
 @secure()
 param wgIpAddress string
 
+@description('JSON object mapping onsite Tuya device names to IP addresses, resolved from Key Vault.')
+@secure()
+param tuyaDevices string
+
 @description('HAOS custom managed disk resource ID for Hamlah27 VM')
 param haosDiskId string
 
@@ -51,6 +55,7 @@ module bifrostNetwork 'modules/vnet-bifrost/main.bicep' = {
   name: 'vnet-bifrost'
   params: {
     wgIpAddress: wgIpAddress
+    tuyaDevices: tuyaDevices
   }
 }
 

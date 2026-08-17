@@ -3,6 +3,38 @@
 @secure()
 param wgIpAddress string
 
+@description('JSON object mapping onsite Tuya device names to IP addresses')
+@secure()
+param tuyaDevices string
+
+var tuyaDeviceList = items(json(tuyaDevices))
+var tuyaDevicePrefixes = [for device in tuyaDeviceList: '${device.value}/32']
+var tuyaRoutes = [for device in tuyaDeviceList: {
+  name: 'route-to-tuya-${device.key}'
+  properties: {
+    addressPrefix: '${device.value}/32'
+    nextHopType: 'VirtualAppliance'
+    nextHopIpAddress: '10.45.9.9' // Heimdall
+  }
+}]
+var tuyaSecurityRules = empty(tuyaDeviceList)
+  ? []
+  : [
+      {
+        name: 'AllowHamlah27ToTuya'
+        properties: {
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '6668'
+          sourceAddressPrefix: '10.45.9.27/32'
+          destinationAddressPrefixes: tuyaDevicePrefixes
+          access: 'Allow'
+          priority: 1020
+          direction: 'Outbound'
+        }
+      }
+    ]
+
 // Route Table to override Azure's default 10.0.0.0/8 drop route
 resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
   name: 'rt-bifrost'
@@ -17,6 +49,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
           nextHopIpAddress: '10.45.9.9' // Heimdall
         }
       }
+      ...tuyaRoutes
     ]
   }
 }
@@ -130,6 +163,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           direction: 'Inbound'
         }
       }
+      ...tuyaSecurityRules
     ]
   }
 }
