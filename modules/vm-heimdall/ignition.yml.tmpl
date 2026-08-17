@@ -70,6 +70,18 @@ storage:
               | jq -r '.value'
           }
 
+          # List secret metadata across every Key Vault page.
+          list_secret_ids() {
+            local secrets_url="https://${KEYVAULT_NAME}.vault.azure.net/secrets?api-version=7.4"
+            local response
+
+            while [[ -n "$secrets_url" ]]; do
+              response=$(curl -fsS -H "Authorization: Bearer $ACCESS_TOKEN" "$secrets_url")
+              jq -r '.value[].id' <<< "$response"
+              secrets_url=$(jq -r '.nextLink // empty' <<< "$response")
+            done
+          }
+
           # Retrieve WireGuard private key and IP address from Key Vault
           echo "Retrieving WireGuard configuration from Key Vault..."
           wg_private_key=$(get_secret "wg-private-key")
@@ -88,9 +100,8 @@ storage:
           EOF
 
           # List all peer secrets and add them to the netdev file
-          peer_secrets=$(curl -s -H "Authorization: Bearer $ACCESS_TOKEN" \
-            "https://${KEYVAULT_NAME}.vault.azure.net/secrets?api-version=7.4" \
-            | jq -r '.value[].id' | grep -E '/wg-peer-[^/]*$' | sed 's|.*/||' | sort -V)
+          peer_secrets=$(list_secret_ids \
+            | grep -E '/wg-peer-[^/]*$' | sed 's|.*/||' | sort -V)
 
           for secret_name in $peer_secrets; do
             peer_value=$(get_secret "$secret_name")
