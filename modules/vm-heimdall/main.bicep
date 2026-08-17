@@ -53,6 +53,7 @@ resource networkInterface 'Microsoft.Network/networkInterfaces@2023-11-01' = {
   name: 'nic-heimdall'
   location: resourceGroup().location
   properties: {
+    enableIPForwarding: true
     ipConfigurations: [
       {
         name: 'ipconfig1'
