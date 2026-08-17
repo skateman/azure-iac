@@ -3,21 +3,18 @@
 @secure()
 param wgIpAddress string
 
-@description('JSON object mapping onsite Tuya device names to IP addresses')
-@secure()
-param tuyaDevices string
+@description('Onsite network prefixes routed through Heimdall')
+param onsiteNetworkPrefixes array
 
-var tuyaDeviceList = items(json(tuyaDevices))
-var tuyaDevicePrefixes = [for device in tuyaDeviceList: '${device.value}/32']
-var tuyaRoutes = [for device in tuyaDeviceList: {
-  name: 'route-to-tuya-${device.key}'
+var onsiteRoutes = [for networkPrefix in onsiteNetworkPrefixes: {
+  name: 'route-to-onsite-${replace(replace(networkPrefix, '.', '-'), '/', '-')}'
   properties: {
-    addressPrefix: '${device.value}/32'
+    addressPrefix: networkPrefix
     nextHopType: 'VirtualAppliance'
     nextHopIpAddress: '10.45.9.9' // Heimdall
   }
 }]
-var tuyaSecurityRules = empty(tuyaDeviceList)
+var onsiteSecurityRules = empty(onsiteNetworkPrefixes)
   ? []
   : [
       {
@@ -27,9 +24,22 @@ var tuyaSecurityRules = empty(tuyaDeviceList)
           sourcePortRange: '*'
           destinationPortRange: '6668'
           sourceAddressPrefix: '10.45.9.27/32'
-          destinationAddressPrefixes: tuyaDevicePrefixes
+          destinationAddressPrefixes: onsiteNetworkPrefixes
           access: 'Allow'
           priority: 1020
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'DenyOtherTrafficToOnsiteNetworks'
+        properties: {
+          protocol: '*'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '*'
+          destinationAddressPrefixes: onsiteNetworkPrefixes
+          access: 'Deny'
+          priority: 1030
           direction: 'Outbound'
         }
       }
@@ -49,7 +59,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-11-01' = {
           nextHopIpAddress: '10.45.9.9' // Heimdall
         }
       }
-      ...tuyaRoutes
+      ...onsiteRoutes
     ]
   }
 }
@@ -163,7 +173,7 @@ resource networkSecurityGroup 'Microsoft.Network/networkSecurityGroups@2023-11-0
           direction: 'Inbound'
         }
       }
-      ...tuyaSecurityRules
+      ...onsiteSecurityRules
     ]
   }
 }
