@@ -31,6 +31,19 @@ var onsiteSecurityRules = empty(onsiteNetworkPrefixes)
         }
       }
       {
+        name: 'AllowHamlah27ToESPHome'
+        properties: {
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          destinationPortRange: '6053'
+          sourceAddressPrefix: '10.45.9.27/32'
+          destinationAddressPrefixes: onsiteNetworkPrefixes
+          access: 'Allow'
+          priority: 1025
+          direction: 'Outbound'
+        }
+      }
+      {
         name: 'DenyOtherTrafficToOnsiteNetworks'
         properties: {
           protocol: '*'

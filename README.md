@@ -8,6 +8,7 @@ Declarative configuration of an Azure resource group with reconciliation.
 * Virtual Network - `vnet-bifrost`
   * Routes `onsiteNetworkPrefixes` through Heimdall
   * Allows only Home Assistant to reach those networks on Tuya TCP port `6668`
+    and ESPHome native API TCP port `6053`
 * Virtual Machine - `vm-heimdall`
   * With a public IP
   * Exposing WireGuard
