@@ -35,11 +35,27 @@ var onsiteSecurityRules = empty(onsiteNetworkPrefixes)
         properties: {
           protocol: 'Tcp'
           sourcePortRange: '*'
-          destinationPortRange: '6053'
+          destinationPortRanges: [
+            '3232'
+            '6053'
+          ]
           sourceAddressPrefix: '10.45.9.27/32'
           destinationAddressPrefixes: onsiteNetworkPrefixes
           access: 'Allow'
           priority: 1025
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'AllowHamlah27ToPingOnsite'
+        properties: {
+          protocol: 'Icmp'
+          sourcePortRange: '*'
+          destinationPortRange: '*'
+          sourceAddressPrefix: '10.45.9.27/32'
+          destinationAddressPrefixes: onsiteNetworkPrefixes
+          access: 'Allow'
+          priority: 1026
           direction: 'Outbound'
         }
       }
