@@ -278,7 +278,7 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           }
           {
             name: 'AZURE_OPENAI_API_VERSION'
-            value: '2024-10-21'
+            value: '2026-09-22'
           }
           {
             name: 'AZURE_OPENAI_API_KEY'

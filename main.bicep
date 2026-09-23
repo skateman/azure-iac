@@ -82,8 +82,8 @@ module hamlah27VM 'modules/vm-hamlah27/main.bicep' = {
 module openAI 'modules/openai/main.bicep' = {
   name: 'oai'
   params: {
-    modelName: 'gpt-5.4-nano'
-    modelVersion: '2026-03-17'
+    modelName: 'gpt-6-luna'
+    modelVersion: '2026-09-22'
     capacity: 250
   }
 }
